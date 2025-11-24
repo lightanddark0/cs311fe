@@ -1,8 +1,10 @@
 import { useNavigate } from 'react-router-dom'
-import { Mic, Briefcase, TrendingUp, Users, Award, ArrowRight, Zap } from 'lucide-react'
+import { useAuth } from '../contexts/AuthContext'
+import { Mic, Briefcase, TrendingUp, Users, Award, ArrowRight, Zap, LogOut, User } from 'lucide-react'
 
 const Home = () => {
   const navigate = useNavigate()
+  const { isAuthenticated, user, logout } = useAuth()
 
   return (
     <div style={{ minHeight: '100vh' }}>
@@ -50,6 +52,7 @@ const Home = () => {
               gap: '32px'
             }}>
               <a href="/" style={{ color: '#3b82f6', fontWeight: '500', textDecoration: 'none' }}>Home</a>
+              <a href="/upload" style={{ color: '#374151', fontWeight: '500', textDecoration: 'none' }}>Upload</a>
               <a href="/interview" style={{ color: '#374151', fontWeight: '500', textDecoration: 'none' }}>Interview</a>
             </nav>
 
@@ -58,6 +61,99 @@ const Home = () => {
               alignItems: 'center', 
               gap: '16px'
             }}>
+              {isAuthenticated ? (
+                <>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    background: '#f3f4f6'
+                  }}>
+                    <User size={18} color="#6b7280" />
+                    <span style={{ color: '#374151', fontWeight: '500', fontSize: '0.875rem' }}>
+                      {user?.full_name || user?.email}
+                    </span>
+                  </div>
+                  <button 
+                    onClick={logout}
+                    style={{
+                      background: 'transparent',
+                      color: '#374151',
+                      border: '1px solid #e5e7eb',
+                      padding: '12px 24px',
+                      borderRadius: '8px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.background = '#f9fafb'
+                      e.target.style.borderColor = '#d1d5db'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.background = 'transparent'
+                      e.target.style.borderColor = '#e5e7eb'
+                    }}
+                  >
+                    <LogOut size={18} />
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button 
+                    onClick={() => navigate('/signin')}
+                    style={{
+                      background: 'transparent',
+                      color: '#374151',
+                      border: '1px solid #e5e7eb',
+                      padding: '12px 24px',
+                      borderRadius: '8px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.background = '#f9fafb'
+                      e.target.style.borderColor = '#d1d5db'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.background = 'transparent'
+                      e.target.style.borderColor = '#e5e7eb'
+                    }}
+                  >
+                    Sign In
+                  </button>
+                  <button 
+                    onClick={() => navigate('/signup')}
+                    style={{
+                      background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                      color: 'white',
+                      border: 'none',
+                      padding: '12px 24px',
+                      borderRadius: '8px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.transform = 'translateY(-1px)'
+                      e.target.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.3)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.transform = 'translateY(0)'
+                      e.target.style.boxShadow = 'none'
+                    }}
+                  >
+                    Sign Up
+                  </button>
+                </>
+              )}
               <button 
                 onClick={() => navigate('/interview')}
                 style={{
@@ -70,7 +166,16 @@ const Home = () => {
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px'
+                  gap: '8px',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.transform = 'translateY(-1px)'
+                  e.target.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.3)'
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.transform = 'translateY(0)'
+                  e.target.style.boxShadow = 'none'
                 }}
               >
                 Start Interview
