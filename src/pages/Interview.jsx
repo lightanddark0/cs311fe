@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
 import CharacterPanel from '../components/CharacterPanel'
 import ChatPanel from '../components/ChatPanel'
 import Resizer from '../components/Resizer'
@@ -8,6 +10,8 @@ import { v4 as uuidv4 } from 'uuid';
 const API_URL = 'http://localhost:3005';
 
 const Interview = () => {
+  const { isAuthenticated, getAuthHeaders } = useAuth()
+  const navigate = useNavigate()
   const [messages, setMessages] = useState([
     {
       id: 1,
@@ -21,10 +25,32 @@ const Interview = () => {
   const [chatPanelWidth, setChatPanelWidth] = useState(480);
   const isResizing = useRef(false);
   const [sessionId, setSessionId] = useState(null);
+  const location = useLocation();
 
   useEffect(() => {
-    setSessionId(uuidv4());
-  }, []);
+    // Check authentication
+    if (!isAuthenticated) {
+      navigate('/signin')
+      return
+    }
+
+    // Try to get sessionId from navigation state first
+    const stateSessionId = location.state?.sessionId;
+    
+    // If not in state, try localStorage (from Upload page)
+    const storedSessionId = localStorage.getItem('interview_session_id');
+    
+    // Use state sessionId first, then stored, then create new
+    const finalSessionId = stateSessionId || storedSessionId || uuidv4();
+    
+    setSessionId(finalSessionId);
+    console.log('Interview page sessionId:', finalSessionId);
+    console.log('State sessionId:', stateSessionId);
+    console.log('Stored sessionId:', storedSessionId);
+    
+    // Always save to localStorage for consistency
+    localStorage.setItem('interview_session_id', finalSessionId);
+  }, [location.state, isAuthenticated, navigate]);
   
   const { 
     isRecording, 
@@ -61,14 +87,14 @@ const Interview = () => {
     setIsTyping(true)
 
     try {
+      // Get auth headers
+      const authHeaders = getAuthHeaders()
+      
       const response = await fetch(`${API_URL}/chat/chatDomain`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          // Note: The backend seems to require authentication.
-          // This will need to be implemented correctly.
-          // For now, I'm sending a placeholder token.
-          // 'Authorization': 'Bearer YOUR_JWT_TOKEN'
+          ...authHeaders
         },
         body: JSON.stringify({
           room_id: sessionId,
@@ -77,7 +103,21 @@ const Interview = () => {
       });
 
       if (!response.ok) {
-        throw new Error('Network response was not ok');
+        // Handle 401 Unauthorized
+        if (response.status === 401) {
+          const errorMessage = {
+            id: messages.length + 2,
+            type: 'bot',
+            message: "Your session has expired. Please sign in again.",
+            timestamp: new Date()
+          }
+          setMessages(prev => [...prev, errorMessage])
+          setTimeout(() => navigate('/signin'), 2000)
+          return
+        }
+        
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.detail || 'Network response was not ok')
       }
 
       const data = await response.json();
