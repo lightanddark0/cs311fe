@@ -292,7 +292,7 @@ const Home = () => {
             style={{ display: "flex", gap: "16px", justifyContent: "center" }}
           >
             <button
-              onClick={() => navigate("/interview")}
+              onClick={() => navigate("/upload?mode=practice")}
               style={{
                 background: "white",
                 color: "#3b82f6",
@@ -312,7 +312,7 @@ const Home = () => {
             </button>
             {/* Nút mới Mock Interview */}
             <button
-              onClick={() => navigate("/mock")}
+              onClick={() => navigate("/upload?mode=mock")}
               style={{
                 background: "white",
                 color: "#3b82f6",
@@ -369,7 +369,16 @@ const Home = () => {
             }}
           >
             {/* Feature 1 */}
-            <div className="card">
+            <Link
+              to="/upload?mode=practice"
+              className="card"
+              style={{
+                textDecoration: "none", // không gạch chân
+                color: "inherit",
+                display: "block",
+                cursor: "pointer",
+              }}
+            >
               <div
                 style={{
                   width: "64px",
@@ -394,20 +403,15 @@ const Home = () => {
               >
                 Voice Interview (Practice)
               </h3>
-              <p
-                style={{
-                  color: "#6b7280",
-                  lineHeight: "1.6",
-                }}
-              >
+              <p style={{ color: "#6b7280", lineHeight: "1.6" }}>
                 Practice with natural voice conversations and get instant
                 feedback on your responses
               </p>
-            </div>
+            </Link>
 
             {/* Feature 2 */}
             <Link
-              to="/mock"
+              to="/upload?mode=mock"
               className="card"
               style={{
                 textDecoration: "none",
