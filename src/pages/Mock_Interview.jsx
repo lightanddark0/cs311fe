@@ -10,7 +10,7 @@ import { v4 as uuidv4 } from "uuid";
 const API_URL = "http://localhost:3005";
 
 const MockInterview = () => {
-  const { isAuthenticated, getAuthHeaders } = useAuth();
+  const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
   const [inputMessage, setInputMessage] = useState("");
@@ -60,9 +60,14 @@ const MockInterview = () => {
     localStorage.setItem("interview_session_id", finalSessionId);
 
     // Load câu hỏi mở đầu từ Upload (/mock/start đã lưu localStorage)
+    const savedFirst = localStorage.getItem("mock_first_question");
+    if (!savedFirst) {
+      // Chưa có phiên mock -> quay lại upload (mode=mock)
+      navigate("/upload?mode=mock");
+      return;
+    }
     const firstQ =
-      localStorage.getItem("mock_first_question") ||
-      "Hello! Let's start. Can you introduce yourself?";
+      savedFirst || "Hello! Let's start. Can you introduce yourself?";
     setMessages([
       { id: 1, type: "bot", message: firstQ, timestamp: new Date() },
     ]);
@@ -85,12 +90,14 @@ const MockInterview = () => {
   }, [messages]);
 
   const sendMessage = async (messageText = inputMessage) => {
-    if (!messageText.trim() || !sessionId) return;
+    const text = messageText.trim();
+    const sid = sessionId || localStorage.getItem("interview_session_id");
+    if (!text || !sid) return;
 
     const userMessage = {
       id: messages.length + 1,
       type: "user",
-      message: messageText,
+      message: text,
       timestamp: new Date(),
     };
 
@@ -104,12 +111,25 @@ const MockInterview = () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          session_id: sessionId,
-          user_answer: messageText,
+          session_id: sid,
+          user_answer: text,
         }),
       });
 
       if (!response.ok) {
+        if (response.status === 400) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: messages.length + 2,
+              type: "bot",
+              message: "Session not initialized. Redirecting to Upload...",
+              timestamp: new Date(),
+            },
+          ]);
+          setTimeout(() => navigate("/upload?mode=mock"), 800);
+          return;
+        }
         if (response.status === 401) {
           const errorMessage = {
             id: messages.length + 2,
@@ -126,14 +146,21 @@ const MockInterview = () => {
       }
 
       const data = await response.json();
-      const botMessage = {
+      // Thêm meta summary (reasoning)
+      const metaMessage = {
         id: messages.length + 2,
+        type: "meta",
+        message: `Summary: ${data.reasoning_summary}`,
+        timestamp: new Date(),
+      };
+      const botMessage = {
+        id: messages.length + 3,
         type: "bot",
         message: data.next_question,
         timestamp: new Date(),
       };
 
-      setMessages((prev) => [...prev, botMessage]);
+      setMessages((prev) => [...prev, metaMessage, botMessage]);
 
       if (/\?\s*$/.test(data?.next_question || "")) {
         setQuestionCount((q) => q + 1);

@@ -137,20 +137,22 @@ const UploadPage = () => {
   };
 
   async function startMockSession(sessionId, cvData, jdData) {
+    const payload = {
+      session_id: sessionId,
+      cv_text: cvData && cvData.text ? cvData.text : String(cvData || ""),
+      jd_text: jdData && jdData.text ? jdData.text : String(jdData || ""),
+    };
     const res = await fetch(`${API_URL}/mock/start`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        session_id: sessionId,
-        cv_text: cvData?.text || cvData,
-        jd_text: jdData?.text || jdData,
-        role: jdData?.role || undefined,
-      }),
+      body: JSON.stringify(payload),
     });
-    if (!res.ok) throw new Error(`mock/start failed: ${res.status}`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `mock/start failed: ${res.status}`);
+    }
     return res.json();
   }
-
   const canProceed = cvStatus === "success" && jdStatus === "success";
 
   const handleStartInterview = async () => {
