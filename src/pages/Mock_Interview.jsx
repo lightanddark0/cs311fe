@@ -9,28 +9,21 @@ import { v4 as uuidv4 } from "uuid";
 
 const API_URL = "http://localhost:3005";
 
-const Interview = () => {
+const MockInterview = () => {
   const { isAuthenticated, getAuthHeaders } = useAuth();
   const navigate = useNavigate();
-  const [messages, setMessages] = useState([
-    {
-      id: 1,
-      type: "bot",
-      message:
-        "Hello! I'm your AI interviewer. I'll help you prepare for your upcoming realistic interview. Let's start with a simple question: Can you introduce yourself to me?",
-      timestamp: new Date(),
-    },
-  ]);
+
   const [inputMessage, setInputMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [chatPanelWidth, setChatPanelWidth] = useState(480);
   const isResizing = useRef(false);
   const [sessionId, setSessionId] = useState(null);
   const location = useLocation();
+  const [messages, setMessages] = useState([]);
 
   // NEW: timer + question counter
   const [remainingSeconds, setRemainingSeconds] = useState(45 * 60); // 45:00
-  const [questionCount, setQuestionCount] = useState(1); // câu mở đầu là 1
+  const [questionCount, setQuestionCount] = useState(0); // sẽ set = 1 sau khi load first question
 
   useEffect(() => {
     // Đếm ngược thời gian
@@ -65,6 +58,15 @@ const Interview = () => {
 
     // Always save to localStorage for consistency
     localStorage.setItem("interview_session_id", finalSessionId);
+
+    // Load câu hỏi mở đầu từ Upload (/mock/start đã lưu localStorage)
+    const firstQ =
+      localStorage.getItem("mock_first_question") ||
+      "Hello! Let's start. Can you introduce yourself?";
+    setMessages([
+      { id: 1, type: "bot", message: firstQ, timestamp: new Date() },
+    ]);
+    setQuestionCount(1);
   }, [location.state, isAuthenticated, navigate]);
 
   const { isRecording, transcript, startRecording, stopRecording, speak } =
@@ -80,7 +82,7 @@ const Interview = () => {
     if (messages.length === 1 && messages[0].type === "bot") {
       speak(messages[0].message);
     }
-  }, []);
+  }, [messages]);
 
   const sendMessage = async (messageText = inputMessage) => {
     if (!messageText.trim() || !sessionId) return;
@@ -97,23 +99,17 @@ const Interview = () => {
     setIsTyping(true);
 
     try {
-      // Get auth headers
-      const authHeaders = getAuthHeaders();
-
-      const response = await fetch(`${API_URL}/chat/chatDomain`, {
+      // Gọi mock agent thay vì chatDomain
+      const response = await fetch(`${API_URL}/mock/turn`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...authHeaders,
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          room_id: sessionId,
-          query: messageText,
+          session_id: sessionId,
+          user_answer: messageText,
         }),
       });
 
       if (!response.ok) {
-        // Handle 401 Unauthorized
         if (response.status === 401) {
           const errorMessage = {
             id: messages.length + 2,
@@ -125,7 +121,6 @@ const Interview = () => {
           setTimeout(() => navigate("/signin"), 2000);
           return;
         }
-
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.detail || "Network response was not ok");
       }
@@ -134,18 +129,17 @@ const Interview = () => {
       const botMessage = {
         id: messages.length + 2,
         type: "bot",
-        message: data.response,
+        message: data.next_question,
         timestamp: new Date(),
       };
 
       setMessages((prev) => [...prev, botMessage]);
 
-      // Tăng số câu hỏi nếu bot kết thúc bằng dấu hỏi
-      if (/\?\s*$/.test(data?.response || "")) {
+      if (/\?\s*$/.test(data?.next_question || "")) {
         setQuestionCount((q) => q + 1);
       }
 
-      speak(data.response);
+      speak(data.next_question);
     } catch (error) {
       console.error("There was a problem with the fetch operation:", error);
       const errorMessage = {
@@ -234,4 +228,4 @@ const Interview = () => {
   );
 };
 
-export default Interview;
+export default MockInterview;

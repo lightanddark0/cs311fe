@@ -28,7 +28,6 @@ const UploadPage = () => {
   const [jdError, setJdError] = useState("");
   const [cvData, setCvData] = useState(null);
   const [jdData, setJdData] = useState(null);
-  const canProceed = cvStatus === "success" && jdStatus === "success";
 
   const handleCvFileChange = (e) => {
     const file = e.target.files[0];
@@ -137,13 +136,37 @@ const UploadPage = () => {
     }
   };
 
-  const handleStartInterview = () => {
+  async function startMockSession(sessionId, cvData, jdData) {
+    const res = await fetch(`${API_URL}/mock/start`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        session_id: sessionId,
+        cv_text: cvData?.text || cvData,
+        jd_text: jdData?.text || jdData,
+        role: jdData?.role || undefined,
+      }),
+    });
+    if (!res.ok) throw new Error(`mock/start failed: ${res.status}`);
+    return res.json();
+  }
+
+  const canProceed = cvStatus === "success" && jdStatus === "success";
+
+  const handleStartInterview = async () => {
     if (!canProceed) return;
-    // Store session_id in localStorage so Interview page can use it
     localStorage.setItem("interview_session_id", sessionId);
-    console.log("Saved sessionId to localStorage:", sessionId);
-    const target = mode === "mock" ? "/mock" : "/interview";
-    navigate(target, { state: { sessionId, cvData, jdData } });
+    if (mode === "mock") {
+      try {
+        const resp = await startMockSession(sessionId, cvData, jdData);
+        localStorage.setItem("mock_first_question", resp?.first_question || "");
+      } catch (e) {
+        console.error(e);
+      }
+      navigate("/mock", { state: { sessionId } });
+    } else {
+      navigate("/interview", { state: { sessionId } });
+    }
   };
 
   return (
